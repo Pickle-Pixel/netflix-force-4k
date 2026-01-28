@@ -9,26 +9,26 @@ Netflix charges for a Premium plan that includes 4K streaming, but then restrict
 - Requires HDCP 2.2 compliant display chain
 - Requires hardware DRM (Widevine L1)
 
-If you're paying for 4K but using Chrome, Firefox, or a setup Netflix doesn't "approve," you're stuck at 1080p or lower. This extension helps bypass those arbitrary restrictions.
+If you're paying for 4K but using Chrome, Firefox, or a setup Netflix doesn't "approve," you're stuck at 1080p or lower. This extension fixes that.
 
 ## What This Extension Does
 
 - **Spoofs screen resolution** to 3840x2160 (4K)
-- **Spoofs User-Agent** to appear as Microsoft Edge (which Netflix allows 4K on)
+- **Spoofs User-Agent** to appear as Microsoft Edge
 - **Overrides Media Capabilities API** to report HEVC/VP9/AV1 codec support
 - **Spoofs HDCP 2.2** compliance checks
 - **Hooks Netflix's Cadmium player** to inject 4K profile requests
-- **Intercepts capability checks** and forces 4K-compatible responses
-- **Handles SPA navigation** so it works when clicking between titles without refresh
+- **Intercepts DRM negotiation** to request higher security levels
+- **Auto-refreshes on navigation** to ensure 4K works every time
 
 ## Requirements
 
 - **Netflix Premium subscription** (4K requires Premium tier)
-- **4K display** (or you'll get upscaled content)
+- **4K display** (or content will be upscaled)
 - **Good internet** (25+ Mbps recommended for 4K streaming)
 - **Chromium-based browser** (Chrome, Edge, Brave, etc.)
 
-> **Best Results**: Use Microsoft Edge on Windows. Edge has proper Widevine L1 hardware DRM support, which combined with this extension's spoofs gives the best chance of 4K playback.
+> **Best Results**: Use Microsoft Edge on Windows. Edge has Widevine L1 hardware DRM support, which combined with this extension gives the most reliable 4K playback.
 
 ## Installation
 
@@ -68,136 +68,115 @@ Or download as ZIP and extract.
 
 ## Usage
 
-1. **Find 4K content** - Not all Netflix titles have 4K. Look for the "Ultra HD 4K" badge on the title's detail page. Netflix Originals almost always have 4K.
+1. **Browse Netflix normally** - Find something to watch
 
-2. **Play the title** - The extension automatically activates on Netflix pages.
+2. **Click on a title** - The extension will auto-refresh the page to ensure 4K
 
-3. **Check the stream quality** - Press `Ctrl+Shift+Alt+D` while watching to show Netflix's hidden stats overlay. Look for:
+3. **Check stream quality** - Press `Ctrl+Shift+Alt+D` while watching to show Netflix's hidden stats overlay:
    - Resolution: `3840x2160`
-   - Playing bitrate: `15000+ kbps` (high bitrate = 4K)
+   - Playing bitrate: `15000+ kbps`
 
-4. **Monitor in console** - The extension logs the actual video resolution:
+4. **Console logging** - The extension logs resolution changes:
    ```
    [Netflix 4K] Video loaded: 3840x2160
    [Netflix 4K] Current resolution: 3840x2160
    ```
 
+## How It Works
+
+Netflix negotiates DRM capabilities when a page loads. The extension intercepts these checks:
+
+| Check | What We Spoof |
+|-------|---------------|
+| User-Agent | Microsoft Edge |
+| Screen resolution | 3840x2160 |
+| `mediaCapabilities.decodingInfo()` | HEVC/VP9/AV1 supported |
+| `MediaSource.isTypeSupported()` | 4K codecs supported |
+| `requestMediaKeySystemAccess()` | HW_SECURE_ALL robustness |
+| `hdcpPolicyCheck` | HDCP 2.2 compliant |
+| Cadmium player config | maxBitrate: 16000, maxHeight: 2160 |
+
+### Why Auto-Refresh?
+
+Netflix is a Single Page Application (SPA). When you click on a movie, it doesn't do a full page reload - it just updates the URL. The problem: DRM capabilities are negotiated once when the page first loads.
+
+If you navigate to a video via SPA, Netflix uses the DRM level from the original page load (before our spoofs were in place for that context). The only reliable fix is forcing a page refresh when you click on a new video, ensuring our spoofs are active during DRM negotiation.
+
+You'll notice a quick refresh when clicking on a title - that's intentional and ensures 4K works.
+
 ## 4K Content to Test With
 
-These titles are guaranteed to have 4K:
+These titles have 4K:
 - **Our Planet** (nature doc - great for testing, obvious quality difference)
 - **Stranger Things**
 - **Wednesday**
 - **The Crown**
 - **Breaking Bad**
 - **The Witcher**
-- Any title with "Netflix Original" or "Ultra HD 4K" badge
-
-## How It Works
-
-Netflix uses multiple layers of checks to determine if your device supports 4K:
-
-### 1. Browser Detection
-Netflix checks your User-Agent to see if you're using an "approved" browser. We spoof this to appear as Edge.
-
-### 2. Screen Resolution
-Netflix checks `window.screen` dimensions. We override these to report 3840x2160.
-
-### 3. Media Capabilities API
-Netflix uses `navigator.mediaCapabilities.decodingInfo()` to check codec support. We intercept this and report that HEVC, VP9, and AV1 are all supported and smooth.
-
-### 4. Media Source Extensions
-Netflix checks `MediaSource.isTypeSupported()` for codec support. We force `true` for 4K codecs.
-
-### 5. DRM (EME) Capabilities
-Netflix requests specific Widevine/PlayReady robustness levels via `navigator.requestMediaKeySystemAccess()`. We try to request the highest levels (HW_SECURE_ALL) with fallbacks.
-
-### 6. HDCP Detection
-Netflix checks for HDCP 2.2 compliance. We spoof the `hdcpPolicyCheck` API.
-
-### 7. Cadmium Player Config
-Netflix's internal player (Cadmium) has configuration that sets max resolution and bitrate. We hook into this and override the limits.
+- Any title with "Ultra HD 4K" badge
 
 ## Limitations
 
 ### Hardware DRM (Widevine L1)
-The main limitation is hardware-level DRM. Netflix requires Widevine L1 for 4K, which is enforced at the browser's CDM (Content Decryption Module) level - not something JavaScript can spoof.
+Netflix requires Widevine L1 for 4K. This is enforced at the browser level:
 
-- **Chrome**: Widevine L3 (software) = typically max 720p-1080p
-- **Edge**: Widevine L1 (hardware) = can do 4K ✓
-- **Firefox**: Widevine L3 = limited
-- **Brave**: Widevine L3 = limited
+| Browser | Widevine Level | Max Quality |
+|---------|----------------|-------------|
+| Edge (Windows) | L1 (hardware) | 4K ✓ |
+| Chrome | L3 (software) | 720p-1080p |
+| Firefox | L3 (software) | 720p-1080p |
+| Brave | L3 (software) | 720p-1080p |
 
-**Recommendation**: Use Edge for best results.
-
-### HDCP Hardware Check
-True HDCP 2.2 compliance requires hardware support in your GPU, cable, and monitor. We can spoof the JavaScript API check, but not the actual HDCP handshake that happens at the hardware level.
+The extension spoofs the JavaScript checks, but can't change the browser's actual Widevine level. **Edge on Windows is recommended** because it has L1 support.
 
 ### Netflix Updates
-Netflix may update their detection methods, which could require updates to this extension.
+Netflix could update their detection methods at any time.
 
 ## Troubleshooting
 
-### Still not getting 4K?
+### Not getting 4K?
 
-1. **Verify your plan**: You need Netflix Premium (not Standard or Basic with ads)
-
-2. **Verify the content**: Not all titles have 4K - look for the "Ultra HD 4K" badge
-
-3. **Try Edge browser**: Edge has the best Widevine support on Windows
-
-4. **Check your bandwidth**: Netflix downgrades quality on slow connections. Test at [fast.com](https://fast.com)
-
-5. **Clear Netflix cookies**: Sometimes Netflix caches device capabilities
-   - Go to Netflix → Settings → Sign out of all devices
-   - Clear browser cookies for netflix.com
-   - Sign back in
-
-6. **Check the stats overlay**: Press `Ctrl+Shift+Alt+D` - if it shows a max resolution cap, that's likely a DRM limitation
+1. **Check your plan** - Need Netflix Premium
+2. **Check the content** - Not all titles have 4K (look for "Ultra HD 4K" badge)
+3. **Use Edge** - Best Widevine support on Windows
+4. **Check bandwidth** - Need 25+ Mbps ([test here](https://fast.com))
+5. **Check stats overlay** - Press `Ctrl+Shift+Alt+D` to see actual resolution
 
 ### Extension not loading?
 
-1. Make sure Developer mode is enabled
-2. Check for errors in `chrome://extensions/`
-3. Try disabling other Netflix-related extensions that might conflict
-
-### Console errors?
-
-The `notifications.netflix.com` error is normal (Netflix notification service, unrelated to playback).
+1. Enable Developer mode in extensions page
+2. Check for errors in the extensions page
+3. Disable other Netflix extensions that might conflict
 
 ## Files
 
 ```
 netflix-force-4k/
 ├── manifest.json      # Extension manifest (MV3)
-├── background.js      # Service worker for settings
-├── content.js         # Content script - handles injection & navigation
-├── inject.js          # Main spoofing logic (runs in page context)
-├── rules.json         # Declarative net request rules (User-Agent spoofing)
-└── README.md          # This file
+├── background.js      # Service worker
+├── content.js         # Injection & navigation handling
+├── inject.js          # Main spoofing logic
+├── rules.json         # Header modification rules
+└── README.md
 ```
 
 ## Technical Details
 
-- **Manifest Version**: 3 (latest Chrome extension standard)
+- **Manifest Version**: 3
 - **Permissions**: `storage`, `declarativeNetRequest`, `declarativeNetRequestWithHostAccess`
 - **Host Permissions**: `*://*.netflix.com/*`
 
-The extension uses:
-- `declarativeNetRequest` for header modification (User-Agent)
+Key techniques:
 - Content script injection at `document_start`
-- Page context script injection for API overrides
-- `MutationObserver` for video element monitoring
-- History API interception for SPA navigation detection
+- Page context script for API overrides
+- `Object.defineProperty` interception for config values
+- `MutationObserver` for video element detection
+- History API interception + auto-refresh for SPA navigation
 
 ## Disclaimer
 
-This extension is for personal use to access content you're already paying for. It doesn't bypass any payment systems, doesn't enable piracy, and doesn't download or save any content. It simply removes artificial device restrictions on a service you're paying for.
+This extension is for accessing content you're already paying for. It doesn't bypass payments, enable piracy, or download content. It removes artificial device restrictions on a paid service.
 
 ## License
 
-MIT License - do whatever you want with it.
-
-## Contributing
-
-Found a bug or Netflix changed something? Open an issue or PR.
+MIT - do whatever you want with it.
