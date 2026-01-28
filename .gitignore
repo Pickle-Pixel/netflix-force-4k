@@ -1,0 +1,21 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Generated icons (if using build process)
+# icon48.png
+# icon128.png
+
+# Packed extension
+*.crx
+*.pem
+*.zip
+
+# Node modules (if adding build tools later)
+node_modules/

@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "Netflix 4K Enabler",
+  "version": "1.0.0",
+  "description": "Forces Netflix to serve 4K content on unsupported browsers/devices",
+  "permissions": [
+    "storage",
+    "declarativeNetRequest",
+    "declarativeNetRequestWithHostAccess"
+  ],
+  "host_permissions": [
+    "*://*.netflix.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*://*.netflix.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_1",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["inject.js"],
+      "matches": ["*://*.netflix.com/*"]
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "User-Agent",
+          "operation": "set",
+          "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0 Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0 SmartTV/1.0 NETTV/4.0"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "*://*.netflix.com/*",
+      "resourceTypes": ["main_frame", "sub_frame", "xmlhttprequest", "other"]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "User-Agent",
+          "operation": "set",
+          "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0 Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0 SmartTV/1.0 NETTV/4.0"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "*://assets.nflxext.com/*",
+      "resourceTypes": ["script", "xmlhttprequest", "other"]
+    }
+  }
+]
