@@ -1,39 +1,129 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Generate Extension Icons</title>
+  <title>Netflix 4K Icon Generator</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      padding: 40px;
+      background: #1a1a1a;
+      color: #fff;
+    }
+    h1 { color: #e50914; }
+    .icons {
+      display: flex;
+      gap: 20px;
+      align-items: flex-end;
+      margin: 20px 0;
+    }
+    .icon-container {
+      text-align: center;
+    }
+    canvas {
+      border: 1px solid #333;
+      border-radius: 4px;
+    }
+    .label {
+      margin-top: 8px;
+      color: #999;
+      font-size: 12px;
+    }
+    button {
+      background: #e50914;
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    button:hover {
+      background: #f40612;
+    }
+    .instructions {
+      background: #222;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 30px;
+    }
+    code {
+      background: #333;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Netflix 4K Enabler - Icon Generator</h1>
-  <p>Right-click each image and "Save image as..." to save as PNG</p>
+  <h1>Netflix 4K Icon Generator</h1>
+  <p>Generate icons for the extension. Click "Download All" to save them to your icons folder.</p>
 
-  <h2>48x48 Icon</h2>
-  <canvas id="icon48" width="48" height="48"></canvas>
+  <div class="icons">
+    <div class="icon-container">
+      <canvas id="icon16" width="16" height="16"></canvas>
+      <div class="label">16x16</div>
+    </div>
+    <div class="icon-container">
+      <canvas id="icon48" width="48" height="48"></canvas>
+      <div class="label">48x48</div>
+    </div>
+    <div class="icon-container">
+      <canvas id="icon128" width="128" height="128"></canvas>
+      <div class="label">128x128</div>
+    </div>
+  </div>
 
-  <h2>128x128 Icon</h2>
-  <canvas id="icon128" width="128" height="128"></canvas>
+  <button onclick="downloadAll()">Download All Icons</button>
+
+  <div class="instructions">
+    <h3>Instructions</h3>
+    <ol>
+      <li>Click "Download All Icons" to download the icon files</li>
+      <li>Move the downloaded files to the <code>icons/</code> folder in the extension directory</li>
+      <li>Reload the extension in your browser</li>
+    </ol>
+  </div>
 
   <script>
-    function drawIcon(canvas, size) {
+    function drawIcon(canvas) {
       const ctx = canvas.getContext('2d');
+      const size = canvas.width;
+      const radius = size * 0.15;
 
       // Background (Netflix red)
-      ctx.fillStyle = '#E50914';
-      const radius = size * 0.15;
+      ctx.fillStyle = '#e50914';
       ctx.beginPath();
       ctx.roundRect(0, 0, size, size, radius);
       ctx.fill();
 
       // Text
-      ctx.fillStyle = 'white';
-      ctx.font = `bold ${size * 0.4}px Arial Black, Arial, sans-serif`;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `bold ${size * 0.45}px Arial, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('4K', size / 2, size / 2 + size * 0.05);
+      ctx.fillText('4K', size / 2, size / 2 + size * 0.02);
     }
 
-    drawIcon(document.getElementById('icon48'), 48);
-    drawIcon(document.getElementById('icon128'), 128);
+    // Draw all icons
+    ['icon16', 'icon48', 'icon128'].forEach(id => {
+      drawIcon(document.getElementById(id));
+    });
+
+    function downloadAll() {
+      const sizes = [
+        { id: 'icon16', name: 'icon16.png' },
+        { id: 'icon48', name: 'icon48.png' },
+        { id: 'icon128', name: 'icon128.png' }
+      ];
+
+      sizes.forEach(({ id, name }) => {
+        const canvas = document.getElementById(id);
+        const link = document.createElement('a');
+        link.download = name;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    }
   </script>
 </body>
 </html>

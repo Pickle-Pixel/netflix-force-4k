@@ -1,12 +1,77 @@
-// Main injection script - runs in Netflix page context
+// Netflix 4K - Main injection script
+// Runs in Netflix page context to spoof capabilities
 (function() {
   'use strict';
 
-  console.log('[Netflix 4K] Initializing...');
+  // ============================================
+  // BROWSER DETECTION & LOGGING
+  // ============================================
+
+  const realUserAgent = navigator.userAgent;
+  const isEdge = realUserAgent.includes('Edg/');
+  const isChrome = realUserAgent.includes('Chrome') && !isEdge;
+  const isFirefox = realUserAgent.includes('Firefox');
+  const browserName = isEdge ? 'Edge' : isFirefox ? 'Firefox' : isChrome ? 'Chrome' : 'Unknown';
+
+  // Extract Edge version
+  let edgeVersion = 0;
+  if (isEdge) {
+    const match = realUserAgent.match(/Edg\/(\d+)/);
+    edgeVersion = match ? parseInt(match[1]) : 0;
+  }
+
+  // Edge 118+ uses PlayReady 3.0 (hardware DRM), others use Widevine L3 (software)
+  const drm = isEdge ? 'PlayReady 3.0' : 'Widevine L3';
+  const can4K = isEdge && edgeVersion >= 118;
+
+  console.log('[Netflix 4K] ==========================================');
+  console.log('[Netflix 4K] Netflix 4K Optimizer - Initializing...');
+  console.log('[Netflix 4K] ==========================================');
+  console.log(`[Netflix 4K] Browser: ${browserName}${edgeVersion ? ' ' + edgeVersion : ''}`);
+  console.log(`[Netflix 4K] DRM: ${drm} (${can4K ? 'Hardware - 4K capable' : 'Software - 1080p max'})`);
+
+  if (isEdge && edgeVersion < 118) {
+    console.log(`[Netflix 4K] NOTE: You need Edge 118+ for 4K. You have Edge ${edgeVersion}.`);
+    console.log('[Netflix 4K] Update Edge at edge://settings/help');
+  } else if (!isEdge) {
+    console.log('[Netflix 4K] NOTE: Your browser uses Widevine L3 (software DRM).');
+    console.log('[Netflix 4K] Netflix requires PlayReady 3.0 for 4K, which only Edge has on Windows.');
+    console.log('[Netflix 4K] We\'ll still maximize quality within your browser\'s limits.');
+  } else {
+    console.log('[Netflix 4K] TIP: Make sure you have the HEVC extension from Microsoft Store.');
+  }
+
+  // ============================================
+  // PLAYBACK STATS TRACKING
+  // ============================================
+
+  let currentStats = {
+    playbackActive: false,
+    currentResolution: null,
+    currentBitrate: null,
+    currentCodec: null,
+    isHDR: false,
+    videoId: null
+  };
+
+  // Send stats to content script
+  const sendStats = () => {
+    window.postMessage({
+      type: 'NETFLIX_4K_STATS',
+      stats: { ...currentStats, timestamp: Date.now() }
+    }, '*');
+  };
+
+  // Update stats periodically
+  setInterval(sendStats, 2000);
 
   // ============================================
   // 1. SPOOF SCREEN RESOLUTION
   // ============================================
+
+  const realWidth = window.screen.width;
+  const realHeight = window.screen.height;
+
   Object.defineProperty(window.screen, 'width', { get: () => 3840 });
   Object.defineProperty(window.screen, 'height', { get: () => 2160 });
   Object.defineProperty(window.screen, 'availWidth', { get: () => 3840 });
@@ -15,9 +80,12 @@
   Object.defineProperty(window.screen, 'pixelDepth', { get: () => 48 });
   Object.defineProperty(window, 'devicePixelRatio', { get: () => 1 });
 
+  console.log(`[Netflix 4K] Screen: ${realWidth}x${realHeight} -> spoofed to 3840x2160`);
+
   // ============================================
   // 2. SPOOF MEDIA CAPABILITIES API
   // ============================================
+
   if (navigator.mediaCapabilities) {
     const originalDecodingInfo = navigator.mediaCapabilities.decodingInfo.bind(navigator.mediaCapabilities);
 
@@ -55,6 +123,7 @@
   // ============================================
   // 3. SPOOF MEDIA SOURCE EXTENSIONS
   // ============================================
+
   if (window.MediaSource) {
     const originalIsTypeSupported = MediaSource.isTypeSupported.bind(MediaSource);
 
@@ -64,7 +133,6 @@
       ];
 
       if (dominated4KTypes.some(t => mimeType.toLowerCase().includes(t))) {
-        console.log('[Netflix 4K] Forcing MSE support for:', mimeType);
         return true;
       }
 
@@ -75,11 +143,12 @@
   // ============================================
   // 4. SPOOF EME / DRM CAPABILITIES
   // ============================================
+
   if (navigator.requestMediaKeySystemAccess) {
     const originalRequestMediaKeySystemAccess = navigator.requestMediaKeySystemAccess.bind(navigator);
 
     navigator.requestMediaKeySystemAccess = async function(keySystem, configs) {
-      console.log('[Netflix 4K] MediaKeySystemAccess requested for:', keySystem);
+      console.log('[Netflix 4K] DRM negotiation for:', keySystem);
 
       // Try with enhanced robustness first
       const enhancedConfigs = configs.map(config => {
@@ -94,9 +163,10 @@
       });
 
       try {
-        return await originalRequestMediaKeySystemAccess(keySystem, enhancedConfigs);
+        const result = await originalRequestMediaKeySystemAccess(keySystem, enhancedConfigs);
+        console.log('[Netflix 4K] DRM: HW_SECURE_ALL accepted');
+        return result;
       } catch (e) {
-        console.log('[Netflix 4K] HW_SECURE_ALL failed, trying SW_SECURE_DECODE');
         // Try SW_SECURE_DECODE (common fallback)
         const swConfigs = configs.map(config => {
           const sw = JSON.parse(JSON.stringify(config));
@@ -109,8 +179,11 @@
           return sw;
         });
         try {
-          return await originalRequestMediaKeySystemAccess(keySystem, swConfigs);
+          const result = await originalRequestMediaKeySystemAccess(keySystem, swConfigs);
+          console.log('[Netflix 4K] DRM: SW_SECURE_DECODE accepted');
+          return result;
         } catch (e2) {
+          console.log('[Netflix 4K] DRM: Using original config');
           return originalRequestMediaKeySystemAccess(keySystem, configs);
         }
       }
@@ -120,14 +193,18 @@
   // ============================================
   // 5. SPOOF HDCP DETECTION
   // ============================================
+
   Object.defineProperty(navigator, 'hdcpPolicyCheck', {
     value: () => Promise.resolve({ hdcp: 'hdcp-2.2' }),
     writable: false
   });
 
+  console.log('[Netflix 4K] HDCP: Spoofed to 2.2');
+
   // ============================================
   // 6. OVERRIDE BROWSER/PLATFORM DETECTION
   // ============================================
+
   Object.defineProperty(navigator, 'userAgent', {
     get: () => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0',
     configurable: true
@@ -146,6 +223,7 @@
   // ============================================
   // 7. WEBGL RENDERER SPOOFING
   // ============================================
+
   const getParameterProxyHandler = {
     apply: function(target, thisArg, argumentsList) {
       const param = argumentsList[0];
@@ -164,10 +242,9 @@
   }
 
   // ============================================
-  // 8. HOOK NETFLIX INTERNAL OBJECTS
+  // 8. NETFLIX 4K PROFILES
   // ============================================
 
-  // Netflix 4K profiles we want to request
   const NETFLIX_4K_PROFILES = [
     // HEVC 4K HDR
     'hevc-main10-L51-dash-cenc-prk',
@@ -189,55 +266,38 @@
     'playready-h264hpl41-dash'
   ];
 
-  // Deep hook into Netflix's react/redux state
-  const hookNetflixState = () => {
-    // Try to find Netflix's player app
-    const reactRoot = document.getElementById('appMountPoint');
-    if (!reactRoot) return false;
-
-    // Look for React fiber
-    const key = Object.keys(reactRoot).find(k => k.startsWith('__reactFiber$') || k.startsWith('__reactContainer$'));
-    if (!key) return false;
-
-    console.log('[Netflix 4K] Found React root, attempting deep hook...');
-    return true;
-  };
-
   // ============================================
   // 9. INTERCEPT OBJECT PROPERTY DEFINITIONS
   // ============================================
 
-  // Intercept any capability/config objects Netflix creates
   const originalDefineProperty = Object.defineProperty;
   Object.defineProperty = function(obj, prop, descriptor) {
-    // Intercept resolution/bitrate related properties
     if (typeof prop === 'string') {
       const lowerProp = prop.toLowerCase();
 
       if (lowerProp.includes('maxbitrate') || lowerProp === 'maxbitrate') {
         if (descriptor.value !== undefined && typeof descriptor.value === 'number') {
-          console.log('[Netflix 4K] Overriding maxBitrate:', descriptor.value, '-> 16000');
+          console.log('[Netflix 4K] Override: maxBitrate', descriptor.value, '-> 16000');
           descriptor.value = 16000;
         }
       }
 
       if (lowerProp.includes('maxheight') || lowerProp === 'maxvideoheight') {
         if (descriptor.value !== undefined && typeof descriptor.value === 'number') {
-          console.log('[Netflix 4K] Overriding maxHeight:', descriptor.value, '-> 2160');
+          console.log('[Netflix 4K] Override: maxHeight', descriptor.value, '-> 2160');
           descriptor.value = 2160;
         }
       }
 
       if (lowerProp.includes('maxwidth') || lowerProp === 'maxvideowidth') {
         if (descriptor.value !== undefined && typeof descriptor.value === 'number') {
-          console.log('[Netflix 4K] Overriding maxWidth:', descriptor.value, '-> 3840');
+          console.log('[Netflix 4K] Override: maxWidth', descriptor.value, '-> 3840');
           descriptor.value = 3840;
         }
       }
 
       if (lowerProp === 'hdcp' || lowerProp === 'hdcpversion') {
         if (descriptor.value !== undefined) {
-          console.log('[Netflix 4K] Overriding HDCP version:', descriptor.value, '-> 2.2');
           descriptor.value = '2.2';
         }
       }
@@ -247,32 +307,24 @@
   };
 
   // ============================================
-  // 10. INTERCEPT OBJECT CREATION
+  // 10. CONFIG OBJECT PROXY
   // ============================================
 
-  // Monitor object assignments for player config
-  const configPatterns = ['profiles', 'maxBitrate', 'videoQuality', 'hdcp'];
-
-  // Proxy handler for config objects
   const createConfigProxy = (target, name) => {
     return new Proxy(target, {
       set(obj, prop, value) {
         const lowerProp = String(prop).toLowerCase();
 
         if (lowerProp === 'maxbitrate' && typeof value === 'number' && value < 16000) {
-          console.log(`[Netflix 4K] ${name}.maxBitrate: ${value} -> 16000`);
           value = 16000;
         }
         if (lowerProp === 'maxvideobitrate' && typeof value === 'number' && value < 16000) {
-          console.log(`[Netflix 4K] ${name}.maxVideoBitrate: ${value} -> 16000`);
           value = 16000;
         }
         if (lowerProp.includes('height') && typeof value === 'number' && value < 2160 && value > 720) {
-          console.log(`[Netflix 4K] ${name}.${prop}: ${value} -> 2160`);
           value = 2160;
         }
         if (lowerProp.includes('width') && typeof value === 'number' && value < 3840 && value > 1280) {
-          console.log(`[Netflix 4K] ${name}.${prop}: ${value} -> 3840`);
           value = 3840;
         }
 
@@ -295,7 +347,7 @@
   };
 
   // ============================================
-  // 11. CADMIUM PLAYER DEEP HOOK
+  // 11. CADMIUM PLAYER HOOK
   // ============================================
 
   let cadmiumHooked = false;
@@ -303,26 +355,19 @@
   const hookCadmium = () => {
     if (cadmiumHooked) return;
 
-    // Netflix stores player in window.netflix
     if (window.netflix) {
-      console.log('[Netflix 4K] Netflix object found');
-
-      // Hook into the player factory
       if (window.netflix.player) {
         cadmiumHooked = true;
-        console.log('[Netflix 4K] Cadmium player factory found');
+        console.log('[Netflix 4K] Hooked Netflix Cadmium player');
 
         const player = window.netflix.player;
 
-        // Try to override create/configure methods
         ['create', 'configure', 'getConfiguration', 'getConfig'].forEach(method => {
           if (typeof player[method] === 'function') {
             const original = player[method].bind(player);
             player[method] = function(...args) {
-              console.log(`[Netflix 4K] player.${method} called`);
               const result = original(...args);
 
-              // If result is an object, try to modify it
               if (result && typeof result === 'object') {
                 if (result.maxBitrate !== undefined) result.maxBitrate = 16000;
                 if (result.maxVideoBitrate !== undefined) result.maxVideoBitrate = 16000;
@@ -338,50 +383,20 @@
           }
         });
       }
-
-      // Hook into appContext if available
-      if (window.netflix.appContext) {
-        const ctx = window.netflix.appContext;
-
-        // Try to find player state/config
-        ['getState', 'getPlayerConfig', 'getVideoConfig'].forEach(method => {
-          if (ctx[method] && typeof ctx[method] === 'function') {
-            const original = ctx[method].bind(ctx);
-            ctx[method] = function(...args) {
-              const result = original(...args);
-              console.log(`[Netflix 4K] appContext.${method} called`);
-              return result;
-            };
-          }
-        });
-      }
     }
   };
 
   // ============================================
-  // 12. INTERCEPT JSON PARSE FOR RESPONSES
+  // 12. INTERCEPT JSON PARSE
   // ============================================
 
   const originalJSONParse = JSON.parse;
   JSON.parse = function(text, reviver) {
     const result = originalJSONParse.call(this, text, reviver);
 
-    // Check if this looks like a Netflix manifest response
     if (result && typeof result === 'object') {
-      // Look for video tracks info
-      if (result.video_tracks || result.videoTracks) {
-        console.log('[Netflix 4K] Video tracks found in JSON response');
-        console.log('[Netflix 4K] Available tracks:', JSON.stringify(result.video_tracks || result.videoTracks, null, 2).substring(0, 500));
-      }
-
-      // Look for playback config
-      if (result.playbackContextId || result.movieId) {
-        console.log('[Netflix 4K] Playback context found');
-      }
-
       // Modify resolution caps if found
       if (result.maxResolution) {
-        console.log('[Netflix 4K] Overriding maxResolution:', result.maxResolution);
         result.maxResolution = { width: 3840, height: 2160 };
       }
     }
@@ -390,121 +405,98 @@
   };
 
   // ============================================
-  // 13. PERIODIC CHECKS
+  // 13. VIDEO ELEMENT MONITORING
   // ============================================
 
-  const checkInterval = setInterval(() => {
-    hookCadmium();
-    hookNetflixState();
-
-    if (cadmiumHooked) {
-      clearInterval(checkInterval);
-    }
-  }, 500);
-
-  setTimeout(() => clearInterval(checkInterval), 60000);
-
-  // ============================================
-  // 14. MONITOR VIDEO ELEMENT
-  // ============================================
-
-  // Watch for video elements and log their resolution
   const videoObserver = new MutationObserver((mutations) => {
     const videos = document.querySelectorAll('video');
     videos.forEach(video => {
       if (!video._netflix4k_monitored) {
         video._netflix4k_monitored = true;
 
-        video.addEventListener('loadedmetadata', () => {
-          console.log(`[Netflix 4K] Video loaded: ${video.videoWidth}x${video.videoHeight}`);
-        });
+        const updateStats = () => {
+          if (video.videoWidth > 0) {
+            const resolution = `${video.videoWidth}x${video.videoHeight}`;
+            const is4K = video.videoWidth >= 3840 || video.videoHeight >= 2160;
 
-        video.addEventListener('playing', () => {
-          console.log(`[Netflix 4K] Playing at: ${video.videoWidth}x${video.videoHeight}`);
-        });
+            if (currentStats.currentResolution !== resolution) {
+              currentStats.currentResolution = resolution;
+              currentStats.playbackActive = true;
 
-        // Check resolution periodically while playing
-        setInterval(() => {
-          if (!video.paused && video.videoWidth > 0) {
-            // Only log if resolution changes
-            if (video._lastRes !== `${video.videoWidth}x${video.videoHeight}`) {
-              video._lastRes = `${video.videoWidth}x${video.videoHeight}`;
-              console.log(`[Netflix 4K] Current resolution: ${video._lastRes}`);
+              const status = is4K ? '4K ACTIVE' : `${resolution}`;
+              console.log(`[Netflix 4K] Resolution: ${resolution} ${is4K ? '(4K!)' : ''}`);
             }
           }
-        }, 5000);
+        };
+
+        video.addEventListener('loadedmetadata', updateStats);
+        video.addEventListener('playing', () => {
+          currentStats.playbackActive = true;
+          updateStats();
+        });
+        video.addEventListener('pause', () => {
+          currentStats.playbackActive = false;
+          sendStats();
+        });
+
+        // Check periodically while playing
+        setInterval(() => {
+          if (!video.paused && video.videoWidth > 0) {
+            updateStats();
+          }
+        }, 3000);
       }
     });
   });
 
-  videoObserver.observe(document.body || document.documentElement, {
-    childList: true,
-    subtree: true
-  });
-
   // ============================================
-  // 15. HANDLE SPA NAVIGATION
+  // 14. SPA NAVIGATION HANDLING
   // ============================================
 
   let lastWatchId = null;
   let lastHref = location.href;
 
-  // Extract video ID from Netflix URL
   const getWatchId = () => {
     const match = location.pathname.match(/\/watch\/(\d+)/);
     return match ? match[1] : null;
   };
 
-  // Aggressive re-hook function with multiple attempts
   const forceRehook = (reason) => {
-    console.log(`[Netflix 4K] Force rehook triggered: ${reason}`);
+    console.log(`[Netflix 4K] Rehook: ${reason}`);
     cadmiumHooked = false;
 
-    // Multiple attempts at different timings to catch the player
-    const delays = [100, 300, 500, 1000, 2000, 3000];
+    const delays = [100, 300, 500, 1000, 2000];
     delays.forEach(delay => {
       setTimeout(() => {
-        if (!cadmiumHooked) {
-          hookCadmium();
-          hookNetflixState();
-        }
+        if (!cadmiumHooked) hookCadmium();
       }, delay);
     });
   };
 
-  // Watch for URL changes (catches all navigation)
-  const urlObserver = setInterval(() => {
+  // URL change detection
+  setInterval(() => {
     if (location.href !== lastHref) {
-      const oldHref = lastHref;
       lastHref = location.href;
-
       const newWatchId = getWatchId();
-      const isWatch = location.pathname.startsWith('/watch');
 
-      // Trigger on ANY watch page navigation
-      if (isWatch) {
-        // Different video OR just entered watch page
+      if (location.pathname.startsWith('/watch')) {
         if (newWatchId !== lastWatchId) {
-          console.log(`[Netflix 4K] New video detected: ${newWatchId}`);
           lastWatchId = newWatchId;
-          forceRehook('new video ID');
-        } else {
-          // Same video but URL changed (maybe episode switch with same ID structure)
-          forceRehook('watch URL changed');
+          currentStats.videoId = newWatchId;
+          forceRehook('new video');
         }
       } else {
-        // Left watch page
         lastWatchId = null;
+        currentStats.playbackActive = false;
       }
     }
   }, 200);
 
-  // Watch for new video elements (most reliable signal)
+  // Video element detection
   const videoCreationObserver = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
         if (node.nodeName === 'VIDEO' || (node.querySelector && node.querySelector('video'))) {
-          console.log('[Netflix 4K] New video element detected in DOM');
           forceRehook('video element added');
           return;
         }
@@ -512,52 +504,19 @@
     }
   });
 
-  videoCreationObserver.observe(document.documentElement, {
-    childList: true,
-    subtree: true
-  });
-
-  // Watch for Netflix's player container specifically
-  const playerContainerObserver = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      for (const node of mutation.addedNodes) {
-        if (node.classList && (
-          node.classList.contains('watch-video') ||
-          node.classList.contains('VideoContainer') ||
-          node.classList.contains('nf-player-container')
-        )) {
-          console.log('[Netflix 4K] Netflix player container added');
-          forceRehook('player container added');
-          return;
-        }
-      }
-    }
-  });
-
-  playerContainerObserver.observe(document.documentElement, {
-    childList: true,
-    subtree: true
-  });
-
-  // Intercept History API for immediate detection
+  // History API interception
   const wrapHistoryMethod = (method) => {
     const original = history[method];
     history[method] = function(...args) {
       const result = original.apply(this, args);
-
-      // Check if navigating to watch page
       setTimeout(() => {
-        if (location.href !== lastHref) {
-          lastHref = location.href;
-          const watchId = getWatchId();
-          if (watchId && watchId !== lastWatchId) {
-            console.log(`[Netflix 4K] History ${method} to new video`);
-            lastWatchId = watchId;
-            forceRehook(`history.${method}`);
-          }
+        const watchId = getWatchId();
+        if (watchId && watchId !== lastWatchId) {
+          lastWatchId = watchId;
+          currentStats.videoId = watchId;
+          forceRehook(`history.${method}`);
         }
       }, 50);
-
       return result;
     };
   };
@@ -565,34 +524,75 @@
   wrapHistoryMethod('pushState');
   wrapHistoryMethod('replaceState');
 
-  // Listen for popstate (back/forward navigation)
   window.addEventListener('popstate', () => {
     setTimeout(() => {
       const watchId = getWatchId();
       if (watchId && watchId !== lastWatchId) {
-        console.log('[Netflix 4K] Popstate to new video');
         lastWatchId = watchId;
         forceRehook('popstate');
       }
     }, 50);
   });
 
-  // Listen for reinit signal from content script
+  // Listen for reinit signal
   window.addEventListener('message', (event) => {
     if (event.data?.type === 'NETFLIX_4K_REINIT') {
       forceRehook('content script signal');
     }
   });
 
-  // Initial check if we're already on a watch page
+  // ============================================
+  // 15. INITIALIZATION
+  // ============================================
+
+  // Start observing
+  if (document.body) {
+    videoObserver.observe(document.body, { childList: true, subtree: true });
+    videoCreationObserver.observe(document.body, { childList: true, subtree: true });
+  } else {
+    document.addEventListener('DOMContentLoaded', () => {
+      videoObserver.observe(document.body, { childList: true, subtree: true });
+      videoCreationObserver.observe(document.body, { childList: true, subtree: true });
+    });
+  }
+
+  // Periodic Cadmium hook attempts
+  const hookInterval = setInterval(() => {
+    hookCadmium();
+    if (cadmiumHooked) clearInterval(hookInterval);
+  }, 500);
+
+  setTimeout(() => clearInterval(hookInterval), 60000);
+
+  // Initial video ID
   const initialWatchId = getWatchId();
   if (initialWatchId) {
     lastWatchId = initialWatchId;
-    console.log(`[Netflix 4K] Initial watch page: ${initialWatchId}`);
+    currentStats.videoId = initialWatchId;
   }
 
-  console.log('[Netflix 4K] All spoofs initialized successfully!');
-  console.log('[Netflix 4K] Screen: 3840x2160, HDCP: 2.2, Profiles: 4K HEVC/VP9/AV1');
+  // Final status
+  console.log('[Netflix 4K] ==========================================');
+  console.log('[Netflix 4K] Initialization complete!');
+  console.log('[Netflix 4K] ==========================================');
+  console.log('[Netflix 4K] Active spoofs:');
+  console.log('[Netflix 4K]   - Screen: 3840x2160');
+  console.log('[Netflix 4K]   - HDCP: 2.2');
+  console.log('[Netflix 4K]   - User-Agent: Edge');
+  console.log('[Netflix 4K]   - Codecs: HEVC/VP9/AV1');
+  console.log('[Netflix 4K]   - Max bitrate: 16 Mbps');
+  console.log('[Netflix 4K]');
   console.log('[Netflix 4K] Press Ctrl+Shift+Alt+D on Netflix to see stream stats');
+  if (!can4K) {
+    console.log('[Netflix 4K]');
+    if (isEdge && edgeVersion < 118) {
+      console.log(`[Netflix 4K] Your Edge version (${edgeVersion}) is too old for 4K.`);
+      console.log('[Netflix 4K] Update to Edge 118+ at edge://settings/help');
+    } else {
+      console.log(`[Netflix 4K] ${browserName} uses ${drm} - limited to 1080p.`);
+      console.log('[Netflix 4K] For 4K, use Microsoft Edge 118+ on Windows.');
+    }
+  }
+  console.log('[Netflix 4K] ==========================================');
 
 })();

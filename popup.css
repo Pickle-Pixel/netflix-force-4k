@@ -1,0 +1,289 @@
+/* Netflix 4K Popup Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 320px;
+  font-family: 'Netflix Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background: #141414;
+  color: #fff;
+}
+
+.container {
+  padding: 16px;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #333;
+}
+
+.logo {
+  width: 36px;
+  height: 36px;
+  background: #e50914;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-text {
+  color: #fff;
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.header h1 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* Status Card */
+.status-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: #222;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.status-indicator {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: pulse 2s infinite;
+}
+
+.status-indicator.green {
+  background: #46d369;
+  box-shadow: 0 0 10px rgba(70, 211, 105, 0.5);
+}
+
+.status-indicator.yellow {
+  background: #f5c518;
+  box-shadow: 0 0 10px rgba(245, 197, 24, 0.5);
+}
+
+.status-indicator.red {
+  background: #e50914;
+  box-shadow: 0 0 10px rgba(229, 9, 20, 0.5);
+}
+
+.status-indicator.gray {
+  background: #666;
+  animation: none;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.status-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.status-label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.status-detail {
+  font-size: 11px;
+  color: #999;
+  margin-top: 2px;
+}
+
+/* Stats Card */
+.stats-card {
+  background: #222;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.stats-card h2 {
+  font-size: 12px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #46d369;
+}
+
+.stat-value.warning {
+  color: #f5c518;
+}
+
+.stat-label {
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* Capability Card */
+.capability-card {
+  background: #222;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.capability-card h2 {
+  font-size: 12px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.capability-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.capability-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.capability-label {
+  color: #999;
+}
+
+.capability-value {
+  font-weight: 500;
+}
+
+.capability-value.good {
+  color: #46d369;
+}
+
+.capability-value.warning {
+  color: #f5c518;
+}
+
+.capability-value.bad {
+  color: #e50914;
+}
+
+/* Verdict Card */
+.verdict-card {
+  background: #222;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.verdict-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.verdict-text {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #ccc;
+}
+
+.verdict-card.can-4k {
+  border-left: 3px solid #46d369;
+}
+
+.verdict-card.no-4k {
+  border-left: 3px solid #f5c518;
+}
+
+/* Spoofs Card */
+.spoofs-card {
+  background: #222;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.spoofs-card h2 {
+  font-size: 12px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.spoof-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.spoof-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #666;
+}
+
+.spoof-item.active {
+  color: #999;
+}
+
+.spoof-check {
+  color: #46d369;
+  font-weight: bold;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding-top: 8px;
+}
+
+.footer p {
+  font-size: 11px;
+  color: #666;
+}
+
+.footer kbd {
+  background: #333;
+  border-radius: 3px;
+  padding: 2px 5px;
+  font-size: 10px;
+  font-family: monospace;
+}

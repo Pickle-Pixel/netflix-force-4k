@@ -1,16 +1,22 @@
 {
   "manifest_version": 3,
-  "name": "Netflix 4K Enabler",
-  "version": "1.0.0",
-  "description": "Forces Netflix to serve 4K content on unsupported browsers/devices",
+  "name": "Netflix 4K",
+  "version": "1.1.0",
+  "description": "Fixes Netflix's broken capability detection to unlock 4K on capable setups",
   "permissions": [
     "storage",
     "declarativeNetRequest",
-    "declarativeNetRequestWithHostAccess"
+    "declarativeNetRequestWithHostAccess",
+    "activeTab",
+    "tabs"
   ],
   "host_permissions": [
     "*://*.netflix.com/*"
   ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Netflix 4K"
+  },
   "content_scripts": [
     {
       "matches": ["*://*.netflix.com/*"],

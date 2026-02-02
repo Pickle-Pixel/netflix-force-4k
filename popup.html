@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Netflix 4K</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <span class="logo-text">4K</span>
+      </div>
+      <h1>Netflix 4K</h1>
+    </header>
+
+    <!-- Status Indicator -->
+    <div class="status-card" id="statusCard">
+      <div class="status-indicator" id="statusIndicator"></div>
+      <div class="status-text">
+        <span class="status-label" id="statusLabel">Checking...</span>
+        <span class="status-detail" id="statusDetail"></span>
+      </div>
+    </div>
+
+    <!-- Live Stats (shown when playing) -->
+    <div class="stats-card" id="statsCard" style="display: none;">
+      <h2>Now Playing</h2>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <span class="stat-value" id="resolution">--</span>
+          <span class="stat-label">Resolution</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value" id="bitrate">--</span>
+          <span class="stat-label">Bitrate</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value" id="codec">--</span>
+          <span class="stat-label">Codec</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value" id="hdr">--</span>
+          <span class="stat-label">HDR</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Capability Check -->
+    <div class="capability-card">
+      <h2>Your Setup</h2>
+      <div class="capability-list">
+        <div class="capability-item">
+          <span class="capability-label">Browser</span>
+          <span class="capability-value" id="browser">Detecting...</span>
+        </div>
+        <div class="capability-item">
+          <span class="capability-label">DRM</span>
+          <span class="capability-value" id="widevine">Detecting...</span>
+        </div>
+        <div class="capability-item">
+          <span class="capability-label">HDCP</span>
+          <span class="capability-value" id="hdcp">Spoofed to 2.2</span>
+        </div>
+        <div class="capability-item">
+          <span class="capability-label">Display</span>
+          <span class="capability-value" id="display">Detecting...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Verdict -->
+    <div class="verdict-card" id="verdictCard">
+      <div class="verdict-icon" id="verdictIcon"></div>
+      <p class="verdict-text" id="verdictText">Analyzing your setup...</p>
+    </div>
+
+    <!-- Spoofs Active -->
+    <div class="spoofs-card">
+      <h2>Active Spoofs</h2>
+      <div class="spoof-list">
+        <div class="spoof-item active">
+          <span class="spoof-check">&#10003;</span>
+          <span>Screen: 3840x2160</span>
+        </div>
+        <div class="spoof-item active">
+          <span class="spoof-check">&#10003;</span>
+          <span>HDCP: 2.2</span>
+        </div>
+        <div class="spoof-item active">
+          <span class="spoof-check">&#10003;</span>
+          <span>User-Agent: Edge</span>
+        </div>
+        <div class="spoof-item active">
+          <span class="spoof-check">&#10003;</span>
+          <span>Codecs: HEVC/VP9/AV1</span>
+        </div>
+        <div class="spoof-item active">
+          <span class="spoof-check">&#10003;</span>
+          <span>Max Bitrate: 16 Mbps</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>D</kbd> on Netflix for stats</p>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
